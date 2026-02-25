@@ -1,0 +1,41 @@
+.notification-page {
+  padding: 16px;
+}
+
+.section {
+  background: #ffffff;
+  border-radius: 14px;
+  padding: 14px;
+  margin-bottom: 20px;
+}
+
+.section h3 {
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 10px;
+}
+
+ion-item {
+  --background: transparent;
+  --padding-start: 0;
+  --inner-padding-end: 0;
+}
+
+.note {
+  font-size: 12px;
+  color: #6b7280;
+  margin-left: 4px;
+  margin-top: 6px;
+}
+
+.actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.actions ion-button {
+  flex: 1;
+}

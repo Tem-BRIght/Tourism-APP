@@ -1,0 +1,48 @@
+/* Section spacing */
+ion-list[inset] {
+  margin-top: 16px;
+  border-radius: 16px;
+}
+
+/* Section headers (icon + title) */
+ion-item strong {
+  font-size: 14px;
+  color: #374151;
+}
+
+/* Section header item */
+ion-item[lines="none"] {
+  --padding-start: 16px;
+  --inner-padding-end: 16px;
+}
+
+/* Section icons */
+ion-item ion-icon {
+  color: var(--ion-color-primary);
+  font-size: 18px;
+}
+
+/* Toggle alignment */
+ion-toggle {
+  --handle-width: 20px;
+  --handle-height: 20px;
+}
+
+/* Data management buttons */
+ion-item[color="danger"] {
+  --color: #dc2626;
+}
+
+/* Bottom action buttons */
+.privacy-actions {
+  padding: 16px;
+}
+
+.privacy-actions ion-button:first-child {
+  margin-bottom: 8px;
+}
+
+/* Make page feel lighter */
+ion-content {
+  --background: #f9fafb;
+}

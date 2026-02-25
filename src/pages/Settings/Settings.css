@@ -1,0 +1,96 @@
+/* Page title */
+ion-title {
+  text-align: center;
+}
+
+/* Section wrapper */
+.section {
+  margin: 16px;
+}
+
+/* Section label (Profile, Preferences, etc.) */
+.section-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #6b7280;
+  margin-bottom: 8px;
+}
+
+/* Card container */
+.card {
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  overflow: hidden;
+}
+
+/* Single row item */
+.item {
+  display: flex;
+  align-items: center;
+  padding: 14px 16px;
+  border-bottom: 1px solid #f1f1f1;
+  cursor: pointer;
+  transition: background 0.15s ease-in-out;
+}
+
+.item:hover {
+  background: #fafafa;
+}
+
+.item:last-child {
+  border-bottom: none;
+}
+
+.item span {
+  flex: 1;
+  font-size: 15px;
+  color: #111827;
+}
+
+/* Right arrow */
+.arrow {
+  color: #9ca3af;
+  font-size: 18px;
+}
+
+/* Icon circle */
+.icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 12px;
+  font-size: 18px;
+}
+
+/* Icon colors */
+.purple { background: #ede9fe; color: #7c3aed; }
+.yellow { background: #fef3c7; color: #f59e0b; }
+.blue   { background: #e0f2fe; color: #0284c7; }
+.green  { background: #dcfce7; color: #16a34a; }
+.cyan   { background: #cffafe; color: #0891b2; }
+.mint   { background: #d1fae5; color: #059669; }
+.red    { background: #fee2e2; color: #dc2626; }
+.gray   { background: #f3f4f6; color: #6b7280; }
+
+/* Logout styling */
+.logout span {
+  color: #dc2626;
+}
+
+.red-outline {
+  background: #fff5f5;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+}
+
+/* Footer text */
+.footer {
+  text-align: center;
+  margin-top: 24px;
+  color: #9ca3af;
+  font-size: 12px;
+}

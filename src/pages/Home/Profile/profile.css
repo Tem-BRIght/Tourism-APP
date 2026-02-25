@@ -1,0 +1,182 @@
+.profile-content {
+  --background: #f8f9fa;
+}
+
+.profile-top-section {
+  text-align: center;
+  padding: 20px;
+  background: linear-gradient(180deg, #fff 20%, #3b92ff 70%);
+  border-bottom: 2px #D1D5DB solid;
+  color: #000;
+  margin-bottom: 20px;
+}
+
+.profile-photo-container {
+  position: relative;
+  display: inline-block;
+  color: #fff;
+  margin-bottom: 15px;
+}
+
+.profile-avatar {
+  width: 100px;
+  height: 100px;
+  border: 3px solid #367CFF;
+}
+
+.camera-icon {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  background: #007bff;
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #367CFF;
+}
+
+.profile-name {
+  font-size: 24px;
+  font-weight: bold;
+  margin: 10px 0 5px 0;
+}
+
+.profile-username {
+  color: #367CFF;
+  font-size: 16px;
+  opacity: 0.8;
+  margin: 0;
+}
+
+.personal-info-section {
+  background: #ffffff;
+  margin-top: -19px;
+  padding: 10px 20px 20px;
+}
+
+.personal-info-section h2 {
+  font-size: 18px;
+  font-weight: bold;
+  margin-bottom: 15px;
+  color: #333;
+}
+
+.personal-info-section ion-item {
+  --background: white;
+  --border-radius: 10px;
+  margin-bottom: 10px;
+  --inner-padding-end: 16px;
+  --inner-padding-start: 16px;
+}
+
+.personal-info-section ion-icon {
+  color: #007bff;
+}
+
+.stats-section {
+  padding: 0 20px 20px;
+  background-color: #FFF;
+}
+
+.stats-section ion-col {
+  padding: 0 5px;
+}
+
+.stat-card {
+  border-radius: 15px;
+  text-align: center;
+  margin: 20px 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.stat-card.visited {
+  --background: #EFF6FF;
+}
+.stat-card.visited h3 {
+  color: #2563EB;
+}
+
+.stat-card.reviews {
+  --background: #FAF5FF;
+}
+.stat-card.reviews h3 {
+  color: #9333EA;
+}
+
+.stat-card.soon {
+  --background: #F0FDF4;
+}
+.stat-card.soon h3 {
+  color: #16A34A;
+}
+
+.stat-card h3 {
+  font-size: 24px;
+  font-weight: bold;
+  margin: 10px 0 5px 0;
+  color: #333;
+}
+
+.stat-card p {
+  font-size: 14px;
+  color: #666;
+  margin: 0;
+}
+
+.action-buttons{
+  padding: 0 20px 20px;
+  background-color: #FFF;
+}
+
+.favorites-btn {
+  --background: #ffebee;
+  --color: #d32f2f;
+  --border-radius: 10px;
+  height: 94px;
+}
+
+.reviews-btn {
+  --background: #f3e5f5;
+  --color: #7b1fa2;
+  --border-radius: 10px;
+  height: 94px;
+}
+.logout-section {
+  padding: 16px;
+  background-color: #fff;
+}
+
+.error-banner {
+  background-color: #f3d5d5;
+  border: 1px solid #e74c3c;
+  border-radius: 8px;
+  padding: 16px;
+  margin: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.error-banner p {
+  color: #c0392b;
+  margin: 0;
+  font-size: 14px;
+}
+
+.empty-state {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 200px;
+  color: #999;
+  font-size: 16px;
+}
+
+/* Added for editable name section */
+.editable-name-section {
+  margin-top: 16px;
+}

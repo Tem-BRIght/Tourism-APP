@@ -1,0 +1,44 @@
+.back-icon {
+  font-size: 22px;
+  margin-right: 12px;
+  cursor: pointer;
+}
+
+.section {
+  margin: 20px 16px;
+  padding: 16px;
+  border-radius: 10px;
+  background: #f9f9f9;
+}
+
+.radio-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.section h3 {
+  display: flex;
+  align-items: center;
+}
+.section h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 10px;
+  text-transform: uppercase;
+  color: #444;
+}
+
+ion-item {
+  --background: transparent;
+  --padding-start: 0;
+}
+
+.action-buttons {
+  display: flex;
+  justify-content: center;
+  padding: 20px 16px 30px;
+  gap: 12px;
+}
