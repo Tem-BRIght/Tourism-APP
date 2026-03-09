@@ -4,9 +4,9 @@ import { arrowBack } from 'ionicons/icons';
 import { useHistory } from 'react-router-dom';
 import './maps.css';
 
-// Note: Replace with your own Google Maps API key
-// You can get one from: https://console.cloud.google.com/google/maps-apis
-const GOOGLE_MAPS_API_KEY = "YOUR_GOOGLE_MAPS_API_KEY";
+// using Leaflet for OpenStreetMap
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 
 // Default center - Pasig City, Philippines
 const defaultCenter = { lat: 14.5776, lng: 121.0858 };
@@ -29,71 +29,39 @@ const MapPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Load Google Maps script
-    const loadGoogleMaps = () => {
-      if (window.google && window.google.maps) {
-        initMap();
-        return;
-      }
+    if (!mapRef.current) return;
 
-      const script = document.createElement('script');
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=places`;
-      script.async = true;
-      script.defer = true;
-      script.onload = initMap;
-      script.onerror = () => {
-        setError('Failed to load Google Maps. Please check your API key.');
-        setLoading(false);
-      };
-      document.head.appendChild(script);
-    };
+    try {
+      // initialize leaflet map
+      const leafletMap = L.map(mapRef.current).setView([defaultCenter.lat, defaultCenter.lng], 14);
 
-    const initMap = () => {
-      if (!mapRef.current) return;
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      }).addTo(leafletMap);
 
-      try {
-        const googleMap = new window.google.maps.Map(mapRef.current, {
-          center: defaultCenter,
-          zoom: 14,
-          disableDefaultUI: false,
-          zoomControl: true,
-          streetViewControl: false,
-          mapTypeControl: false,
-          fullscreenControl: true,
+      // Add markers for tourist spots
+      touristSpots.forEach((spot) => {
+        const marker = L.marker([spot.lat, spot.lng])
+          .addTo(leafletMap)
+          .bindPopup(`<strong>${spot.title}</strong><br>${spot.address}`);
+
+        marker.on('click', () => {
+          setSelectedSpot(spot);
+          leafletMap.setView([spot.lat, spot.lng], 16);
         });
+      });
 
-        setMap(googleMap);
-
-        // Add markers for tourist spots
-        touristSpots.forEach((spot) => {
-          const marker = new window.google.maps.Marker({
-            position: { lat: spot.lat, lng: spot.lng },
-            map: googleMap,
-            title: spot.title,
-            animation: window.google.maps.Animation.DROP,
-          });
-
-          marker.addListener('click', () => {
-            setSelectedSpot(spot);
-            googleMap.setCenter({ lat: spot.lat, lng: spot.lng });
-            googleMap.setZoom(16);
-          });
-        });
-
-        setLoading(false);
-      } catch (err) {
-        setError('Error initializing Google Maps.');
-        setLoading(false);
-      }
-    };
-
-    loadGoogleMaps();
+      setMap(leafletMap);
+      setLoading(false);
+    } catch (err) {
+      setError('Error initializing map.');
+      setLoading(false);
+    }
   }, []);
 
   const handleGoToSpot = (spot: typeof touristSpots[0]) => {
     if (map) {
-      map.setCenter({ lat: spot.lat, lng: spot.lng });
-      map.setZoom(16);
+      map.setView([spot.lat, spot.lng], 16);
       setSelectedSpot(spot);
     }
   };
@@ -122,16 +90,13 @@ const MapPage: React.FC = () => {
         {error && (
           <div className="map-error">
             <p>{error}</p>
-            <p style={{ fontSize: '12px', marginTop: '10px' }}>
-              To use Google Maps, you need to:
-              <br />1. Get an API key from Google Cloud Console
-              <br />2. Enable "Maps JavaScript API"
-              <br />3. Replace "YOUR_GOOGLE_MAPS_API_KEY" in maps.tsx
-            </p>
           </div>
         )}
 
-        <div ref={mapRef} className="map-container" style={{ display: loading || error ? 'none' : 'block' }}></div>
+        <div
+          ref={mapRef}
+          className={`map-container ${loading || error ? 'hidden' : ''}`}
+        ></div>
 
         {/* List of tourist spots */}
         <div className="spots-list">
@@ -152,11 +117,5 @@ const MapPage: React.FC = () => {
   );
 };
 
-// Add Google Maps types - using any to avoid type issues
-declare global {
-  interface Window {
-    google: any;
-  }
-}
 
 export default MapPage;

@@ -98,7 +98,7 @@ const ResetPassword: React.FC = () => {
     <IonPage>
       <IonContent className="reset-content" fullscreen>
         <div className="logo-wrap">
-          <img src="/public/assets/images/Pasig Logo.png" alt="Pasig Logo" className="logo" />
+          <img src="/assets/images/Pasig Logo.png" alt="Pasig Logo" className="logo" />
         </div>
         <h2 className="title">Reset Password</h2>
         <p className="subtitle">Enter the code from your email and create a new password</p>

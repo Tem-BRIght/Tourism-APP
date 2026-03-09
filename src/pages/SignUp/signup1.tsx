@@ -46,7 +46,7 @@ const SignUP1: React.FC = () => {
           </IonToolbar>
 
         <div className="logo-wrap">
-          <img src="/public/assets/images/Pasig Logo.png" alt="Pasig Logo" className="logo" />
+          <img src="/assets/images/Pasig Logo.png" alt="Pasig Logo" className="logo" />
         </div>
         <h2 className="title">Tourism AI</h2>
         <p className="subtitle">DISCOVER THE PASIG WITH AI GUIDANCE!</p>

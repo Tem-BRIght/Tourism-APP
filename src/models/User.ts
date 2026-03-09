@@ -1,5 +1,5 @@
 export interface UserProfile {
-  id: string;
+  id?: string;
   name: {
     firstname: string;
     surname: string;
@@ -9,4 +9,11 @@ export interface UserProfile {
   dateOfBirth: string;
   nickname?: string;
   img?: string;
+  nationality?: string;
+  address?: string;
+  contactNumber?: string;
+  gender?: string;
+  isGoogleUser?: boolean;
+  createdAt?: string;
+  isFullyRegistered?: boolean;
 }

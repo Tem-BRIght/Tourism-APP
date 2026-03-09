@@ -1,11 +1,13 @@
-import React, { useState } from 'react';
-import { useHistory, useLocation } from 'react-router-dom';
+import React, { useState, useEffect, useRef } from 'react';
+import { useHistory, useLocation, useParams } from 'react-router-dom';
 import {
   IonContent, IonHeader, IonPage, IonTitle, IonToolbar,
   IonButtons, IonButton, IonIcon, IonImg, IonModal,
   IonText, IonLoading
 } from '@ionic/react';
 import { arrowBack, location as locationIcon, star } from 'ionicons/icons';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 import { Destination } from '../../../types';
 import './DestinationDetail.css';
 
@@ -42,23 +44,78 @@ const SECTIONS: { key: keyof Destination; label: string }[] = [
 
 // Basic info fields to display (key, label, default value)
 const BASIC_FIELDS = [
-  { key: 'desc', label: 'Description', default: 'Pasig Recreational and Adventure Venue for Events' },
-  { key: 'hours', label: 'Hours', default: '6 AM - 10 PM' },
-  { key: 'entrance', label: 'Entrance', default: 'Free' },
-  { key: 'goodFor', label: 'Good for', default: 'Families, Events' },
-  { key: 'parking', label: 'Parking', default: 'P50/hour' },
-  { key: 'lastUpdated', label: 'Last updated', default: 'January 2026' },
+  { key: 'desc', label: 'Description', def: 'Pasig Recreational and Adventure Venue for Events' },
+  { key: 'hours', label: 'Hours', def: '6 AM - 10 PM' },
+  { key: 'entrance', label: 'Entrance', def: 'Free' },
+  { key: 'goodFor', label: 'Good for', def: 'Families, Events' },
+  { key: 'parking', label: 'Parking', def: 'P50/hour' },
+  { key: 'lastUpdated', label: 'Last updated', def: 'January 2026' },
 ];
 
 const DestinationDetail: React.FC = () => {
   const history = useHistory();
   const location = useLocation();
-  const dest = location.state as Destination;
+  const { id } = useParams<{ id: string }>();
+
+  // allow fallback to `id` param if state was lost (refresh/bookmark)
+  const [dest, setDest] = useState<Destination | null>(
+    (location.state as Destination) || null
+  );
+  const mapRef = useRef<HTMLDivElement>(null);
+  const mapInstanceRef = useRef<L.Map | null>(null);
   const [showItinerary, setShowItinerary] = useState(false);
   const [itinerary, setItinerary] = useState('');
   const [generating, setGenerating] = useState(false);
+  const [showMap, setShowMap] = useState(false);
+
+  // hooks must always run in the same order; the previous early return
+  // was placed before this effect which caused "rendered fewer hooks"
+  // when dest was falsy on one render and truthy the next.
+  useEffect(() => {
+    if (!showMap || !mapRef.current) return;
+
+    if (mapInstanceRef.current) {
+      mapInstanceRef.current.remove();
+    }
+
+    try {
+      const lat = (dest as any).lat || 14.5776;
+      const lng = (dest as any).lng || 121.0858;
+
+      const leafletMap = L.map(mapRef.current).setView([lat, lng], 16);
+
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      }).addTo(leafletMap);
+
+      L.marker([lat, lng])
+        .addTo(leafletMap)
+        .bindPopup(`<strong>${dest?.title ?? ''}</strong><br>${dest?.location || dest?.address || 'Destination'}`)
+        .openPopup();
+
+      mapInstanceRef.current = leafletMap;
+    } catch (err) {
+      console.error('Error initializing map:', err);
+    }
+  }, [showMap, dest]);
+
+  // if user hit refresh or arrived directly, load by id parameter
+  useEffect(() => {
+    if (dest || !id) return;
+
+    import('../../../services/destinationService').then(({ fetchDestinations }) => {
+      fetchDestinations()
+        .then(all => {
+          if (all && (all as any)[id]) {
+            setDest((all as any)[id]);
+          }
+        })
+        .catch(err => console.error('Failed to load destination', err));
+    });
+  }, [id, dest]);
 
   if (!dest) {
+    // still ran the hooks above but bail out early for the UI
     return (
       <IonPage>
         <IonContent className="ion-padding">
@@ -75,10 +132,7 @@ const DestinationDetail: React.FC = () => {
   };
 
   const handleNavigate = () => {
-    const address = dest.location || dest.address || dest.distance;
-    if (address) {
-      window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`, '_blank');
-    }
+    setShowMap(true);
   };
 
   const callOpenAI = async (userMessage: string) => {
@@ -170,7 +224,8 @@ const DestinationDetail: React.FC = () => {
               dest[key] ? (
                 <div className="section" key={key}>
                   <h3>{label}</h3>
-                  <p style={{ whiteSpace: 'pre-line' }}>{dest[key] as string}</p>
+                  <p className="" >{/* spacing handled in css(see .section p) */}
+                  {dest[key] as string}</p>
                 </div>
               ) : null
             )}
@@ -189,8 +244,23 @@ const DestinationDetail: React.FC = () => {
           </IonHeader>
           <IonContent className="ion-padding">
             <IonText>
-              <pre style={{ whiteSpace: 'pre-wrap' }}>{itinerary}</pre>
+              <pre className="itinerary-text">{itinerary}</pre>
             </IonText>
+          </IonContent>
+        </IonModal>
+
+        {/* Map modal */}
+        <IonModal isOpen={showMap} onDidDismiss={() => setShowMap(false)}>
+          <IonHeader>
+            <IonToolbar>
+              <IonTitle>{dest.title} Location</IonTitle>
+              <IonButtons slot="end">
+                <IonButton onClick={() => setShowMap(false)}>Close</IonButton>
+              </IonButtons>
+            </IonToolbar>
+          </IonHeader>
+          <IonContent>
+            <div ref={mapRef} className="map-container"></div>
           </IonContent>
         </IonModal>
 

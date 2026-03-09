@@ -159,23 +159,12 @@ const Profile: React.FC = () => {
     }
   };
 
-  if (!userProfile && !loading) {
-    return (
-      <IonPage>
-        <IonContent><div className="empty-state">No profile data available</div></IonContent>
-      </IonPage>
-    );
-  }
-
   return (
     <IonPage>
       <IonHeader>
         <IonToolbar>
           <IonButtons slot="start"><IonBackButton defaultHref="/home" /></IonButtons>
           <IonTitle>Profile</IonTitle>
-          <div className="logout-section">
-              <IonButton color="danger" expand="block" onClick={() => setShowLogoutAlert(true)}>Logout</IonButton>
-            </div>
           <IonButtons slot="end">
             <IonButton ref={popoverButtonRef} onClick={() => setShowPopover(true)}>
               <IonIcon icon={ellipsisVertical} />
@@ -293,8 +282,31 @@ const Profile: React.FC = () => {
 
             {/* Logout */}
             <div className="logout-section">
-              <IonButton color="danger" expand="block" onClick={() => setShowLogoutAlert(true)}>Logout</IonButton>
+              <IonButton
+                color="danger"
+                expand="block"
+                onClick={() => setShowLogoutAlert(true)}
+              >
+                Logout
+              </IonButton>
             </div>
+
+            <IonAlert
+              isOpen={showLogoutAlert}
+              onDidDismiss={() => setShowLogoutAlert(false)}
+              header="Confirm Logout"
+              message="Are you sure you want to logout?"
+              buttons={[
+                { text: 'Cancel', role: 'cancel' },
+                { text: 'Logout', handler: handleLogout }
+              ]}
+            />
+            <IonPopover isOpen={showPopover} onDidDismiss={() => setShowPopover(false)} triggerRef={popoverButtonRef}>
+              <IonList>
+                <IonItem button onClick={() => { setShowPopover(false); history.push('/scan-qr'); }}><IonLabel>Scan QR code</IonLabel></IonItem>
+                <IonItem button onClick={handleEditProfile}><IonLabel>Edit profile</IonLabel></IonItem>
+              </IonList>
+            </IonPopover>
           </>
         )}
 

@@ -25,12 +25,14 @@ import DestinationDetail from './pages/Home/DestinationDetail/DestinationDetail'
 import Notifications from './pages/Home/Notifications/Notifications';
 import AIGuide from './pages/AI/AIGuide';
 import Settings from './pages/Settings/Settings';
+import ErrorBoundary from './components/ErrorBoundary';
 import About from './pages/Settings/About';
 import Help from './pages/Settings/Help';
 import LanguageRegion from './pages/Settings/Language';
 import NotificationSettings from './pages/Settings/Notifications';
 import PrivacyTerms from './pages/Settings/Privacy';
 import MapPage from './pages/Map/maps';
+import GoogleUserProfile from './pages/SignUp/googleUser/googleUser';
 
 /* Core CSS required for Ionic components to work properly */
 import '@ionic/react/css/core.css';
@@ -70,18 +72,22 @@ const App: React.FC = () => (
       <IonApp>
         <IonReactRouter>
           <IonRouterOutlet>
-            <Route exact path="/login" component={Login} />
-            <Route exact path="/signup1" component={SignUP1} />
-            <Route exact path="/signup2" component={SignUP2} />
-            <Route exact path="/signup3" component={SignUP3} />
-            <Route exact path="/reset-password" component={ResetPassword} />
-            <Route exact path="/home" component={Home} /> 
-            <Route exact path="/profile" component={Profile} />
-            <Route exact path="/home/profile/activities" component={AllActivities} />
-            <Route exact path="/destination/:id" component={DestinationDetail} />
-            <Route exact path="/notifications" component={Notifications} />
-            <Route exact path="/ai-guide" component={AIGuide} />
-            <Route exact path="/settings" component={Settings} />
+            {/* wrap pages that might crash in an error boundary */}
+            <ErrorBoundary>
+              <Route exact path="/login" component={Login} />
+              <Route exact path="/signup1" component={SignUP1} />
+              <Route exact path="/signup2" component={SignUP2} />
+              <Route exact path="/signup3" component={SignUP3} />
+              <Route exact path="/googleUser" component={GoogleUserProfile} />
+              <Route exact path="/reset-password" component={ResetPassword} />
+              <Route exact path="/home" component={Home} /> 
+              <Route exact path="/profile" component={Profile} />
+              <Route exact path="/home/profile/activities" component={AllActivities} />
+              <Route exact path="/destination/:id" component={DestinationDetail} />
+              <Route exact path="/notifications" component={Notifications} />
+              <Route exact path="/ai-guide" component={AIGuide} />
+              <Route exact path="/settings" component={Settings} />
+            </ErrorBoundary>
             <Route exact path="/settings/about" component={About} />
             <Route exact path="/settings/help" component={Help} />
             <Route exact path="/settings/language" component={LanguageRegion} />

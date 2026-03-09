@@ -11,6 +11,11 @@ export interface SignupData {
   nationality: string;
   profilePic: string | null;
   acceptedTerms: boolean;
+  isGoogleUser?: boolean;
+  address?: string;
+  contactNumber?: string;
+  gender?: string;
+  uid?: string; // Google UID for new users
 }
 
 interface SignupContextType {
@@ -30,6 +35,11 @@ const initialSignupData: SignupData = {
   nationality: '',
   profilePic: null,
   acceptedTerms: false,
+  isGoogleUser: false,
+  address: '',
+  contactNumber: '',
+  gender: '',
+  uid: '',
 };
 
 const SignupContext = createContext<SignupContextType | undefined>(undefined);

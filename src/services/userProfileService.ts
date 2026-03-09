@@ -14,6 +14,11 @@ export interface UserProfile {
   nickname?: string;
   img?: string | null;
   nationality?: string;
+  address?: string;
+  contactNumber?: string;
+  gender?: string;
+  isGoogleUser?: boolean;
+  isFullyRegistered?: boolean;
   createdAt?: string;
 }
 
@@ -30,7 +35,12 @@ export const createUserProfile = async (userId: string, profileData: Partial<Use
       nationality: (profileData as any).nationality || '',
       nickname: profileData.nickname || (profileData as any).username || '',
       img: profileData.img || (profileData as any).profilePic || null,
-      createdAt: new Date().toISOString(),
+      address: (profileData as any).address || '',
+      contactNumber: (profileData as any).contactNumber || '',
+      gender: (profileData as any).gender || '',
+      isGoogleUser: (profileData as any).isGoogleUser || false,
+      isFullyRegistered: (profileData as any).isFullyRegistered || false,
+      createdAt: (profileData as any).createdAt || new Date().toISOString(),
     };
 
     await set(ref(db, `users/${userId}`), dataToWrite);

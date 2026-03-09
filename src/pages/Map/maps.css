@@ -5,6 +5,11 @@
   background-color: #f0f0f0;
 }
 
+/* utility class used to hide the map when loading or on error */
+.map-container.hidden {
+  display: none;
+}
+
 /* Map Loading and Error States */
 .map-loading,
 .map-error {

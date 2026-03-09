@@ -10,11 +10,14 @@ import { Link } from 'react-router-dom';
 import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { auth } from '../../firebase';
 import { useAuth } from '../../context/AuthContext';
+import { useSignup } from '../../context/SignupContext';
+import { getUserProfile } from '../../services/userProfileService';
 import './Login.css';
 
 const Login: React.FC = () => {
   const history = useHistory();
   const { isAuthenticated } = useAuth();
+  const { updateSignupData } = useSignup();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -67,9 +70,69 @@ const Login: React.FC = () => {
     setShowLoading(true);
     try {
       const provider = new GoogleAuthProvider();
-      await signInWithPopup(auth, provider);
-      // Redirect to home (will happen automatically via useEffect)
-      history.push('/home');
+      // Request additional scopes for profile information
+      provider.addScope('profile');
+      provider.addScope('email');
+      
+      const result = await signInWithPopup(auth, provider);
+      const user = result.user;
+      
+      // Check if user profile exists in database
+      try {
+        const existingProfile = await getUserProfile(user.uid);
+        
+        if (existingProfile) {
+          // User already exists, redirect to home
+          history.push('/home');
+        } else {
+          // New user, extract Google info and redirect to googleUser page
+          const googleUser = result.user;
+          
+          // Extract name parts from display name
+          const displayName = googleUser.displayName || '';
+          const parts = displayName.trim().split(' ');
+          const firstname = parts[0] || '';
+          const surname = parts.length > 1 ? parts.slice(1).join(' ') : '';
+          
+          // Try to get birthdate (if available from Google)
+          // Note: Google API typically requires special permissions for birthdate
+          const birthdate = googleUser.metadata?.creationTime ? 
+            new Date(googleUser.metadata.creationTime).toISOString().split('T')[0] : '';
+
+          // Update signup context with Google user data
+          updateSignupData({
+            firstName: firstname,
+            surname: surname,
+            email: googleUser.email || '',
+            isGoogleUser: true,
+            uid: user.uid,
+            dateOfBirth: birthdate,
+            username: googleUser.displayName || firstname,
+          });
+
+          // Redirect to Google user profile completion page
+          history.push('/googleUser');
+        }
+      } catch (dbError) {
+        console.error('Error checking user profile:', dbError);
+        // On error, assume new user and proceed
+        const googleUser = result.user;
+        const displayName = googleUser.displayName || '';
+        const parts = displayName.trim().split(' ');
+        const firstname = parts[0] || '';
+        const surname = parts.length > 1 ? parts.slice(1).join(' ') : '';
+        
+        updateSignupData({
+          firstName: firstname,
+          surname: surname,
+          email: googleUser.email || '',
+          isGoogleUser: true,
+          uid: user.uid,
+          username: googleUser.displayName || firstname,
+        });
+
+        history.push('/googleUser');
+      }
     } catch (error: any) {
       setShowLoading(false);
       setAlertHeader('Google Login Failed');
@@ -92,7 +155,7 @@ const Login: React.FC = () => {
     <IonPage>
       <IonContent className="login-content" fullscreen>
         <div className="logo-wrap">
-          <img src="/public/assets/images/Pasig Logo.png" alt="Pasig Logo" className="logo" />
+          <img src="/assets/images/Pasig Logo.png" alt="Pasig Logo" className="logo" />
         </div>
         <h2 className="title">Tourism AI</h2>
         <p className="subtitle">DISCOVER THE PASIG WITH AI GUIDANCE!</p>
