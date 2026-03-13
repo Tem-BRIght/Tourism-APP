@@ -25,6 +25,8 @@ import {
 } from 'ionicons/icons';
 import { useHistory } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { fetchDestinations } from '../../services/destinationService';
+import { Destination } from '../../types';
 import './AIGuide.css';
 
 const GROQ_API_KEY = import.meta.env.VITE_GROQ_API_KEY;
@@ -58,76 +60,7 @@ type PlaceSuggestion = {
   tags: string[];
 };
 
-// ─── Static data ──────────────────────────────────────────────────────────────
-
-const samplePlaces: PlaceSuggestion[] = [
-  {
-    id: '1', title: 'Pasig City Museum',
-    image: '/assets/images/destinations/pasig-museum.jpg',
-    rating: 4.5, reviews: 128, distance: '1.2 km',
-    address: 'Caruncho Ave, Pasig City',
-    type: 'Historical Museum', category: 'museum',
-    tags: ['historical', 'museum', 'culture', 'heritage', 'history', 'educational'],
-  },
-  {
-    id: '2', title: 'Rainforest Park',
-    image: '/assets/images/destinations/rainforest-park.jpg',
-    rating: 4.3, reviews: 256, distance: '2.5 km',
-    address: 'Marcos Hwy, Pasig City',
-    type: 'Nature Park', category: 'park',
-    tags: ['park', 'nature', 'family', 'kids', 'outdoor', 'relaxation', 'picnic', 'zoo'],
-  },
-  {
-    id: '3', title: 'Pasig Cathedral',
-    image: '/assets/images/destinations/pasig-cathedral.jpg',
-    rating: 4.7, reviews: 342, distance: '0.8 km',
-    address: 'Caballero St, Pasig City',
-    type: 'Church', category: 'church',
-    tags: ['church', 'religious', 'cathedral', 'spiritual', 'mass', 'prayer'],
-  },
-  {
-    id: '4', title: 'Kapitolyo',
-    image: '/assets/images/destinations/kapitolyo.jpg',
-    rating: 4.6, reviews: 567, distance: '1.5 km',
-    address: 'Kapitolyo, Pasig City',
-    type: 'Food District', category: 'food',
-    tags: ['food', 'restaurant', 'dining', 'eat', 'cafe', 'restaurants', 'kainan', 'food trip'],
-  },
-  {
-    id: '5', title: 'Tiendesitas',
-    image: '/assets/images/destinations/tiendesitas.jpg',
-    rating: 4.4, reviews: 432, distance: '2.8 km',
-    address: 'Ortigas Ave, Pasig City',
-    type: 'Shopping Village', category: 'shopping',
-    tags: ['shopping', 'mall', 'market', 'pasalubong', 'souvenir', 'native products'],
-  },
-  {
-    id: '6', title: 'The Podium',
-    image: '/assets/images/destinations/podium.jpg',
-    rating: 4.5, reviews: 678, distance: '3.2 km',
-    address: 'Ortigas Center, Pasig City',
-    type: 'Shopping Mall', category: 'mall',
-    tags: ['mall', 'shopping', 'dining', 'cinema', 'restaurants', 'stores'],
-  },
-  {
-    id: '7', title: 'Pasig River Esplanade',
-    image: '/assets/images/destinations/esplanade.jpg',
-    rating: 4.3, reviews: 189, distance: '1.0 km',
-    address: 'Pasig River, Pasig City',
-    type: 'Scenic Spot', category: 'park',
-    tags: ['scenic', 'walk', 'jog', 'river', 'sunset', 'relaxation', 'outdoor'],
-  },
-  {
-    id: '8', title: 'Cafe Agapito',
-    image: '/assets/images/destinations/cafe-agapito.jpg',
-    rating: 4.6, reviews: 234, distance: '1.8 km',
-    address: 'Kapitolyo, Pasig City',
-    type: 'Cafe', category: 'food',
-    tags: ['cafe', 'coffee', 'food', 'dessert', 'pastry', 'breakfast'],
-  },
-];
-
-const FALLBACK_IMAGE = '/assets/images/placeholder.jpg';
+// ─── Static data (fallback) ───────────────────────────────────────────────────
 
 const SUGGESTED_QUESTIONS = [
   'What are the top 5 must-see places in Pasig?',
@@ -185,66 +118,66 @@ function detectLanguage(text: string): 'en' | 'tl' | 'mixed' {
   return 'en';
 }
 
-// ─── System prompts ──────────────────────────────────────────────────────────
+// ─── Base system prompts ───────────────────────────────────────────
 
-const SYSTEM_PROMPT_EN =
+const BASE_SYSTEM_PROMPT_EN =
   'You are ALI, a friendly and knowledgeable AI tourism guide for Pasig City, Philippines. ' +
   'You help tourists and locals discover the best places, food, culture, and activities in Pasig City. ' +
-  'Keep responses concise (2-3 sentences max), warm, and helpful. ' +
+  'Keep responses concise (1-2 sentences max), warm, and helpful. ' +
   'Always mention specific place names when relevant.';
 
-const SYSTEM_PROMPT_TL =
+const BASE_SYSTEM_PROMPT_TL =
   'Ikaw si ALI, isang magiliw at matalinong AI tour guide para sa Pasig City, Philippines. ' +
-  'Tumutulong ka sa mga turista at lokal na tuklasin ang pinakamagagandang lugar, pagkain, kultura, at aktibidad sa Pasig. ' +
-  'Panatilihing maikli ang sagot (2-3 pangungusap lang), mainit, at nakakatulong. ' +
+  'Tumutulong ka sa mga turista at lokal na alamin ang pinakamagagandang lugar, pagkain, kultura, at aktibidad sa Pasig. ' +
+  'Panatilihing maikli ang sagot (1-2 pangungusap lang), mainit, at nakakatulong. ' +
   'Palaging banggitin ang mga partikular na pangalan ng lugar kung may kaugnayan. ' +
   'Magsalita ka sa natural na Taglish (Tagalog at English) – parang kausap mo lang ang isang kaibigan. ' +
   'Huwong masyadong pormal; gumamit ng mga salitang ginagamit ng mga Pilipino sa pang-araw-araw na usapan.';
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// ─── AI message formatter ─────────────────────────────────────────────────────
 
-function shouldShowPlaceSuggestions(query: string): boolean {
-  const q = query.toLowerCase();
-  return PLACE_KEYWORDS.some(kw => q.includes(kw));
+function renderInline(text: string): React.ReactNode {
+  const parts = text.split(/(\*{1,2}[^*]+\*{1,2})/g);
+  return parts.map((part, i) => {
+    if (/^\*\*(.+)\*\*$/.test(part)) return <strong key={i}>{part.slice(2, -2)}</strong>;
+    if (/^\*(.+)\*$/.test(part))     return <em key={i}>{part.slice(1, -1)}</em>;
+    return part;
+  });
 }
 
-function extractPlaceSuggestions(userQuery: string, aiResponse: string): PlaceSuggestion[] {
-  if (!shouldShowPlaceSuggestions(userQuery)) return [];
+function formatAIMessage(text: string): React.ReactNode {
+  const lines = text.split('\n');
+  const elements: React.ReactNode[] = [];
+  let listItems: string[] = [];
+  let listKey = 0;
 
-  const q = userQuery.toLowerCase();
-  const r = aiResponse.toLowerCase();
-
-  // Top / best / must-see → return top-rated
-  if (['top', 'best', 'must-see', 'famous'].some(kw => q.includes(kw))) {
-    return [...samplePlaces].sort((a, b) => b.rating - a.rating).slice(0, 3);
-  }
-
-  // Category matching
-  const matched = new Set<string>();
-  for (const [cat, keywords] of Object.entries(CATEGORY_KEYWORDS)) {
-    if (keywords.some(kw => q.includes(kw) || r.includes(kw))) {
-      matched.add(cat);
+  const flushList = () => {
+    if (listItems.length > 0) {
+      elements.push(
+        <ul key={`list-${listKey++}`} className="ai-msg-list">
+          {listItems.map((item, i) => <li key={i}>{renderInline(item)}</li>)}
+        </ul>
+      );
+      listItems = [];
     }
-  }
+  };
 
-  if (matched.size > 0) {
-    const seen = new Set<string>();
-    const results: PlaceSuggestion[] = [];
-    for (const place of samplePlaces) {
-      if (!seen.has(place.id) && (matched.has(place.category) || place.tags.some(t => matched.has(t)))) {
-        seen.add(place.id);
-        results.push(place);
-      }
+  lines.forEach((line, idx) => {
+    const t = line.trim();
+    if (/^[-*•]\s+/.test(t) || /^\d+\.\s+/.test(t)) {
+      listItems.push(t.replace(/^[-*•]\s+/, '').replace(/^\d+\.\s+/, ''));
+      return;
     }
-    if (results.length > 0) return results.slice(0, 3);
-  }
-
-  // Generic recommendation
-  if (['recommend', 'suggest', 'where'].some(kw => q.includes(kw))) {
-    return samplePlaces.slice(0, 3);
-  }
-
-  return [];
+    flushList();
+    if (!t) return;
+    if (/^[A-Z].{0,48}:$/.test(t)) {
+      elements.push(<p key={idx} className="ai-msg-heading">{t}</p>);
+      return;
+    }
+    elements.push(<p key={idx} className="ai-msg-para">{renderInline(t)}</p>);
+  });
+  flushList();
+  return <>{elements}</>;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -253,49 +186,89 @@ const AIGuide: React.FC = () => {
   const history = useHistory();
   const { user } = useAuth();
 
+  // Chat state
   const [messages, setMessages] = useState<ChatMessage[]>([
     { text: "Hello! I'm your Pasig AI Guide 👋\nHow can I help you explore today?", sender: 'ai', timestamp: new Date() },
   ]);
-  const [input, setInput]                     = useState('');
-  const [isTyping, setIsTyping]               = useState(false);
-  const [isListening, setIsListening]         = useState(false);
-  const [isSpeaking, setIsSpeaking]           = useState(false);
-  const [isPaused, setIsPaused]               = useState(false);
-  const [isSearching, setIsSearching]         = useState(false);
-  const [isThinking, setIsThinking]           = useState(false);
-  const [voiceSpeed, setVoiceSpeed]           = useState(1.0);
-  const [showSettings, setShowSettings]       = useState(false);
-  const [isMuted, setIsMuted]                 = useState(false);
-  const [voiceGender, setVoiceGender]         = useState<'any' | 'female' | 'male'>('female');
-  const [errorMessage, setErrorMessage]       = useState<string | null>(null);
-  const [showErrorToast, setShowErrorToast]   = useState(false);
+  const [input, setInput] = useState('');
+  const [isTyping, setIsTyping] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
+  const [isThinking, setIsThinking] = useState(false);
+  const [voiceSpeed, setVoiceSpeed] = useState(1.0);
+  const [showSettings, setShowSettings] = useState(false);
+  const [isMuted, setIsMuted] = useState(false);
+  const [voiceGender, setVoiceGender] = useState<'any' | 'female' | 'male'>('female');
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [showErrorToast, setShowErrorToast] = useState(false);
   const [showVoiceIndicator, setShowVoiceIndicator] = useState(false);
-  const [speakingMessageId, setSpeakingMessageId]   = useState<number | null>(null);
-  const [pausedMessageId, setPausedMessageId]       = useState<number | null>(null);
-  const [imageErrors, setImageErrors]         = useState<Set<string>>(new Set());
+  const [speakingMessageId, setSpeakingMessageId] = useState<number | null>(null);
+  const [pausedMessageId, setPausedMessageId] = useState<number | null>(null);
+  const [imageErrors, setImageErrors] = useState<Set<string>>(new Set());
   const [tappedMessageId, setTappedMessageId] = useState<number | null>(null);
 
-  const recognitionRef    = useRef<any>(null);
-  const speechSynthRef    = useRef<SpeechSynthesisUtterance | null>(null);
-  const messagesEndRef    = useRef<HTMLDivElement>(null);
-  const mountedRef        = useRef(true);
-  const isMutedRef        = useRef(isMuted);
-  const voiceSpeedRef     = useRef(voiceSpeed);
-  const voiceGenderRef    = useRef(voiceGender);
-  const isSendingRef      = useRef(false);               // ✅ concurrency lock
+  // Destinations state (from Realtime Database)
+  const [places, setPlaces] = useState<PlaceSuggestion[]>([]);
+  const [placesLoading, setPlacesLoading] = useState(true);
+  const [placesError, setPlacesError] = useState<string | null>(null);
 
-  // Keep refs in sync
-  useEffect(() => { isMutedRef.current = isMuted; },     [isMuted]);
+  const recognitionRef = useRef<any>(null);
+  const speechSynthRef = useRef<SpeechSynthesisUtterance | null>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const mountedRef = useRef(true);
+  const isMutedRef = useRef(isMuted);
+  const voiceSpeedRef = useRef(voiceSpeed);
+  const voiceGenderRef = useRef(voiceGender);
+  const isSendingRef = useRef(false);
+
+  // Sync refs with state
+  useEffect(() => { isMutedRef.current = isMuted; }, [isMuted]);
   useEffect(() => { voiceSpeedRef.current = voiceSpeed; }, [voiceSpeed]);
   useEffect(() => { voiceGenderRef.current = voiceGender; }, [voiceGender]);
 
-  // ✅ Moved from inside generateAIResponse – proper place for this effect
+  // Voice changed handler
   useEffect(() => {
     if (window.speechSynthesis) {
       window.speechSynthesis.onvoiceschanged = () => {
         window.speechSynthesis.getVoices();
       };
     }
+  }, []);
+
+  // Fetch destinations from Realtime Database on mount
+  useEffect(() => {
+    const loadDestinations = async () => {
+      try {
+        setPlacesLoading(true);
+        const data: Destination[] = await fetchDestinations();
+
+        // Map Destination to PlaceSuggestion (adjust field names as needed)
+        const mapped: PlaceSuggestion[] = data.map(dest => ({
+          id: dest.id,
+          title: dest.name || dest.title || 'Unknown Place',
+          image: dest.imageUrl || dest.image || '/assets/images/placeholder.jpg',
+          rating: dest.rating ?? 4.5,          // fallback if missing
+          reviews: dest.reviews ?? 0,
+          distance: dest.distance ?? '2 km',    // fallback; you can compute later
+          address: dest.address || '',
+          type: dest.category || 'attraction',  // use category if exists
+          category: (dest.category as PlaceCategory) || 'historical',
+          tags: [],                              // tags not in Destination; keep empty
+        }));
+
+        setPlaces(mapped);
+        setPlacesError(null);
+      } catch (err) {
+        console.error('Error loading destinations:', err);
+        setPlacesError('Failed to load places. Using offline data.');
+        // Optionally set fallback static data here
+      } finally {
+        setPlacesLoading(false);
+      }
+    };
+    loadDestinations();
   }, []);
 
   // User profile pic
@@ -324,8 +297,8 @@ const AIGuide: React.FC = () => {
 
     try {
       const utterance = new SpeechSynthesisUtterance(text);
-      const voices    = window.speechSynthesis.getVoices();
-      const gender    = voiceGenderRef.current;
+      const voices = window.speechSynthesis.getVoices();
+      const gender = voiceGenderRef.current;
 
       let preferredVoice: SpeechSynthesisVoice | undefined;
       if (gender === 'female') {
@@ -340,15 +313,15 @@ const AIGuide: React.FC = () => {
       }
       if (preferredVoice) utterance.voice = preferredVoice;
 
-      utterance.rate   = voiceSpeedRef.current;
-      utterance.pitch  = 1.0;
+      utterance.rate = voiceSpeedRef.current;
+      utterance.pitch = 1.0;
       utterance.volume = 1.0;
 
-      utterance.onstart  = () => { setIsSpeaking(true);  setIsPaused(false); setSpeakingMessageId(messageIndex); setPausedMessageId(null); };
-      utterance.onend    = () => { setIsSpeaking(false); setIsPaused(false); setSpeakingMessageId(null);         setPausedMessageId(null); };
-      utterance.onerror  = () => { setIsSpeaking(false); setIsPaused(false); setSpeakingMessageId(null);         setPausedMessageId(null); };
-      utterance.onpause  = () => { setIsSpeaking(false); setIsPaused(true); };
-      utterance.onresume = () => { setIsSpeaking(true);  setIsPaused(false); };
+      utterance.onstart = () => { setIsSpeaking(true); setIsPaused(false); setSpeakingMessageId(messageIndex); setPausedMessageId(null); };
+      utterance.onend = () => { setIsSpeaking(false); setIsPaused(false); setSpeakingMessageId(null); setPausedMessageId(null); };
+      utterance.onerror = () => { setIsSpeaking(false); setIsPaused(false); setSpeakingMessageId(null); setPausedMessageId(null); };
+      utterance.onpause = () => { setIsSpeaking(false); setIsPaused(true); };
+      utterance.onresume = () => { setIsSpeaking(true); setIsPaused(false); };
 
       speechSynthRef.current = utterance;
       window.speechSynthesis.speak(utterance);
@@ -458,6 +431,82 @@ const AIGuide: React.FC = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isTyping, isThinking, isSearching]);
 
+  // ── Place suggestion logic ──────────────────────────────────────────────────
+
+  const shouldShowPlaceSuggestions = useCallback((query: string): boolean => {
+    const q = query.toLowerCase();
+    return PLACE_KEYWORDS.some(kw => q.includes(kw));
+  }, []);
+
+  // Returns relevant places based on user query only (no AI response yet)
+  const getRelevantPlaces = useCallback((userQuery: string, maxPlaces = 5): PlaceSuggestion[] => {
+    if (!shouldShowPlaceSuggestions(userQuery) || places.length === 0) return [];
+
+    const q = userQuery.toLowerCase();
+
+    // Top / best / must-see → return top-rated
+    if (['top', 'best', 'must-see', 'famous'].some(kw => q.includes(kw))) {
+      return [...places].sort((a, b) => b.rating - a.rating).slice(0, maxPlaces);
+    }
+
+    // Category matching
+    const matched = new Set<string>();
+    for (const [cat, keywords] of Object.entries(CATEGORY_KEYWORDS)) {
+      if (keywords.some(kw => q.includes(kw))) {
+        matched.add(cat);
+      }
+    }
+
+    if (matched.size > 0) {
+      const seen = new Set<string>();
+      const results: PlaceSuggestion[] = [];
+      for (const place of places) {
+        if (!seen.has(place.id) && (matched.has(place.category) || place.tags.some(t => matched.has(t)))) {
+          seen.add(place.id);
+          results.push(place);
+        }
+      }
+      if (results.length > 0) return results.slice(0, maxPlaces);
+    }
+
+    // Generic recommendation
+    if (['recommend', 'suggest', 'where'].some(kw => q.includes(kw))) {
+      return places.slice(0, maxPlaces);
+    }
+
+    return [];
+  }, [places, shouldShowPlaceSuggestions]);
+
+  // Used after AI response to also match against AI text (keeps backward compatibility)
+  const extractPlaceSuggestions = useCallback((
+    userQuery: string,
+    aiResponse: string
+  ): PlaceSuggestion[] => {
+    const baseMatches = getRelevantPlaces(userQuery, 3);
+    if (baseMatches.length > 0) return baseMatches;
+
+    // If no matches from user query, try matching AI response (fallback)
+    const r = aiResponse.toLowerCase();
+    const matched = new Set<string>();
+    for (const [cat, keywords] of Object.entries(CATEGORY_KEYWORDS)) {
+      if (keywords.some(kw => r.includes(kw))) {
+        matched.add(cat);
+      }
+    }
+    if (matched.size > 0) {
+      const seen = new Set<string>();
+      const results: PlaceSuggestion[] = [];
+      for (const place of places) {
+        if (!seen.has(place.id) && (matched.has(place.category) || place.tags.some(t => matched.has(t)))) {
+          seen.add(place.id);
+          results.push(place);
+        }
+      }
+      return results.slice(0, 3);
+    }
+    return [];
+  }, [places, getRelevantPlaces]);
+
   // ── AI response ─────────────────────────────────────────────────────────────
 
   const generateAIResponse = async (
@@ -475,28 +524,42 @@ const AIGuide: React.FC = () => {
       // Simulate "thinking" delay
       await new Promise(res => setTimeout(res, 800));
 
-      const historyMessages = conversationHistory.slice(-6).map(msg => ({
-        role:    (msg.sender === 'user' ? 'user' : 'assistant') as 'user' | 'assistant',
-        content: msg.text,
-      }));
+      // Get relevant places from Firebase based on user query
+      const relevantPlaces = getRelevantPlaces(userMessage, 5);
+      
+      // Build place context string
+      let placeContext = '';
+      if (relevantPlaces.length > 0) {
+        placeContext = '\n\nHere are some places in Pasig that might match the user\'s interest:\n' +
+          relevantPlaces.map(p => 
+            `- ${p.title}: ${p.type}, ${p.rating}⭐, ${p.distance} away. ${p.address}`
+          ).join('\n') +
+          '\n\nWhen recommending places, you can refer to these specific locations.';
+      }
 
       // Detect language of the user message
       const lang = detectLanguage(userMessage);
-      const systemPrompt = (lang === 'tl' || lang === 'mixed') ? SYSTEM_PROMPT_TL : SYSTEM_PROMPT_EN;
+      const basePrompt = (lang === 'tl' || lang === 'mixed') ? BASE_SYSTEM_PROMPT_TL : BASE_SYSTEM_PROMPT_EN;
+      const systemPrompt = basePrompt + placeContext;
+
+      const historyMessages = conversationHistory.slice(-6).map(msg => ({
+        role: (msg.sender === 'user' ? 'user' : 'assistant') as 'user' | 'assistant',
+        content: msg.text,
+      }));
 
       const response = await fetch(GROQ_API_ENDPOINT, {
         method: 'POST',
         headers: {
-          Authorization:  `Bearer ${GROQ_API_KEY}`,
+          Authorization: `Bearer ${GROQ_API_KEY}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model:       GROQ_MODEL,
-          messages:    [{ role: 'system', content: systemPrompt }, ...historyMessages, { role: 'user', content: userMessage }],
+          model: GROQ_MODEL,
+          messages: [{ role: 'system', content: systemPrompt }, ...historyMessages, { role: 'user', content: userMessage }],
           temperature: 0.7,
-          max_tokens:  180,
-          top_p:       0.9,
-          stream:      false,
+          max_tokens: 180,
+          top_p: 0.9,
+          stream: false,
         }),
       });
 
@@ -505,11 +568,13 @@ const AIGuide: React.FC = () => {
         throw new Error(`GROQ API ${response.status}: ${errorBody}`);
       }
 
-      const data    = await response.json();
+      const data = await response.json();
       const aiText: string | undefined = data.choices?.[0]?.message?.content;
 
       if (aiText) {
-        return { text: aiText, places: extractPlaceSuggestions(userMessage, aiText) };
+        // Use the same relevant places for cards (or refine with extractPlaceSuggestions if needed)
+        const finalPlaces = relevantPlaces.slice(0, 3); // Show up to 3 cards
+        return { text: aiText, places: finalPlaces };
       }
 
       return { text: 'I received an unexpected response. Please try again.', places: [] };
@@ -541,11 +606,9 @@ const AIGuide: React.FC = () => {
       timestamp: new Date()
     };
 
-    // Build updated messages array using the current state
     const updatedMessages = [...messages, userMessage];
     setMessages(updatedMessages);
 
-    // Call the response generator with the updated history
     await generateAndRespond(trimmed, updatedMessages);
   };
 
@@ -558,7 +621,7 @@ const AIGuide: React.FC = () => {
     setIsTyping(true);
 
     try {
-      const { text: aiText, places } =
+      const { text: aiText, places: suggestedPlaces } =
         await generateAIResponse(userText, updatedHistory);
 
       if (!mountedRef.current) return;
@@ -568,7 +631,7 @@ const AIGuide: React.FC = () => {
           text: aiText,
           sender: 'ai',
           timestamp: new Date(),
-          places
+          places: suggestedPlaces
         };
         const updated = [...prev, aiMessage];
 
@@ -588,7 +651,7 @@ const AIGuide: React.FC = () => {
         setIsSearching(false);
         setIsThinking(false);
       }
-      isSendingRef.current = false;   // ✅ release the lock
+      isSendingRef.current = false;
     }
   };
 
@@ -721,29 +784,13 @@ const AIGuide: React.FC = () => {
         <div className="chat-area">
           {messages.map((msg, i) => (
             <div key={i}>
-              <div className={`message-container ${msg.sender}`}>
+              <div className={`message-container ${msg.sender}${i === 0 && msg.sender === 'ai' ? ' welcome' : ''}`}>
                 {msg.sender === 'ai' && (
                   <img src="/assets/images/AI/ALI 2.png" alt="AI Guide" className="profile-img" />
                 )}
 
-                <div
-                  className={`bubble ${msg.sender} ${
-                    (isSpeaking && speakingMessageId === i) || (isPaused && pausedMessageId === i)
-                      ? 'speaking'
-                      : ''
-                  }`}
-                  onClick={() => msg.sender === 'ai' && handleMessageClick(msg, i)}
-                  role="button"
-                  tabIndex={msg.sender === 'ai' ? 0 : undefined}
-                  onKeyDown={e => msg.sender === 'ai' && e.key === 'Enter' && handleMessageClick(msg, i)}
-                  aria-label={
-                    msg.sender === 'ai'
-                      ? `AI message. Click to ${speakingMessageId === i ? 'pause' : 'play'}.`
-                      : undefined
-                  }
-                >
-
-                  {/* Speaking / paused indicator */}
+                <div className="bubble-col">
+                  {/* Speaking / paused pill — floated above bubble */}
                   {msg.sender === 'ai' && (speakingMessageId === i || pausedMessageId === i) && (
                     <div className="speaking-indicator" aria-live="polite">
                       <IonIcon
@@ -753,10 +800,27 @@ const AIGuide: React.FC = () => {
                     </div>
                   )}
 
-                  {msg.text}
+                  <div
+                    className={`bubble ${msg.sender} ${
+                      (isSpeaking && speakingMessageId === i) || (isPaused && pausedMessageId === i)
+                        ? 'speaking'
+                        : ''
+                    }`}
+                    onClick={() => msg.sender === 'ai' && handleMessageClick(msg, i)}
+                    role="button"
+                    tabIndex={msg.sender === 'ai' ? 0 : undefined}
+                    onKeyDown={e => msg.sender === 'ai' && e.key === 'Enter' && handleMessageClick(msg, i)}
+                    aria-label={
+                      msg.sender === 'ai'
+                        ? `AI message. Click to ${speakingMessageId === i ? 'pause' : 'play'}.`
+                        : undefined
+                    }
+                  >
+                    {msg.sender === 'ai' ? formatAIMessage(msg.text) : msg.text}
 
-                  <div className="message-timestamp" aria-label={`Sent at ${msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`}>
-                    {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    <div className="message-timestamp" aria-label={`Sent at ${msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`}>
+                      {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </div>
                   </div>
                 </div>
 
@@ -782,7 +846,7 @@ const AIGuide: React.FC = () => {
                       aria-label={`View details for ${place.title}`}
                     >
                       <img
-                        src={imageErrors.has(place.id) ? FALLBACK_IMAGE : place.image}
+                        src={imageErrors.has(place.id) ? '/assets/images/placeholder.jpg' : place.image}
                         alt={place.title}
                         className="place-card-image"
                         onError={() => handleImageError(place.id)}
